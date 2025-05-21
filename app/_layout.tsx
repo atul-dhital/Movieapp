@@ -11,19 +11,11 @@ export default function RootLayout() {
       <UserProvider>
         <SnackbarProvider>
           <StatusBar hidden={true} />
-          <Stack>
-            <Stack.Screen
-              name="(tabs)"
-              options={{
-                headerShown: false,
-              }}
-            />
-            <Stack.Screen
-              name="movie/[id]"
-              options={{
-                headerShown: false,
-              }}
-            />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="search" />
+            <Stack.Screen name="profile" />
+            <Stack.Screen name="movie/[id]" />
           </Stack>
         </SnackbarProvider>
       </UserProvider>

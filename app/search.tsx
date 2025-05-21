@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ActivityIndicator, FlatList, Image, TouchableOpacity } from "react-native";
+import { View, Text, ActivityIndicator, FlatList, Image, TouchableOpacity, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 
 import { images } from "@/constants/images";
 import { icons } from "@/constants/icons";
@@ -13,6 +14,7 @@ import SearchBar from "@/components/SearchBar";
 import MovieDisplayCard from "@/components/MovieCard";
 
 const Search = () => {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [trendingSearches, setTrendingSearches] = useState([
@@ -174,93 +176,99 @@ const Search = () => {
     <View className="flex-1 bg-primary">
       <Image
         source={images.bg}
-        className="flex-1 absolute w-full z-0"
+        className="absolute w-full z-0"
         resizeMode="cover"
       />
 
-      <FlatList
-        className="px-5"
-        data={movies as Movie[]}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => <MovieDisplayCard {...item} />}
-        numColumns={3}
-        columnWrapperStyle={{
-          justifyContent: "flex-start",
-          gap: 16,
-          marginVertical: 16,
-        }}
-        contentContainerStyle={{ paddingBottom: 100 }}
-        ListHeaderComponent={
-          <>
-            <View className="w-full flex-row justify-center mt-20 items-center">
-              <Image source={icons.logo} className="w-12 h-10" />
-            </View>
+      <View className="flex-row justify-between items-center px-5 pt-12 pb-4">
+        <TouchableOpacity onPress={() => router.replace("/")}>
+          <Image source={icons.logo} className="w-12 h-10" />
+        </TouchableOpacity>
+        <View className="flex-row gap-4">
+          <TouchableOpacity onPress={() => router.replace("/search")}>
+            <Image source={icons.search} className="w-6 h-6" tintColor="#A8B5DB" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.replace("/profile")}>
+            <Image source={icons.person} className="w-6 h-6" tintColor="#A8B5DB" />
+          </TouchableOpacity>
+        </View>
+      </View>
 
-            <View className="my-5">
-              <SearchBar
-                placeholder="Search for a movie"
-                value={searchQuery}
-                onChangeText={handleSearch}
-              />
-            </View>
+      <ScrollView
+        className="flex-1 px-5"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ minHeight: "100%", paddingBottom: 10 }}
+      >
+        <View className="my-5">
+          <SearchBar
+            placeholder="Search for a movie"
+            value={searchQuery}
+            onChangeText={handleSearch}
+          />
+        </View>
 
-            {renderSearchSection()}
+        {renderSearchSection()}
 
-            {loading && (
-              <ActivityIndicator
-                size="large"
-                color="#0000ff"
-                className="my-3"
-              />
-            )}
+        {loading && (
+          <ActivityIndicator
+            size="large"
+            color="#0000ff"
+            className="my-3"
+          />
+        )}
 
-            {error && (
-              <View className="bg-red-500/20 p-4 rounded-lg my-3">
-                <Text className="text-red-500 text-center">
-                  Error: {error.message}
-                </Text>
+        {error && (
+          <View className="bg-red-500/20 p-4 rounded-lg my-3">
+            <Text className="text-red-500 text-center">
+              Error: {error.message}
+            </Text>
+          </View>
+        )}
+
+        {!loading &&
+          !error &&
+          searchQuery.trim() &&
+          movies?.length! > 0 && (
+            <Text className="text-xl text-white font-bold mb-4">
+              Search Results for{" "}
+              <Text className="text-accent">{searchQuery}</Text>
+            </Text>
+          )}
+
+        {!loading && !error && movies?.length! > 0 && (
+          <View className="flex-row flex-wrap justify-between">
+            {movies.map((movie) => (
+              <View key={movie.id} className="w-[31%] mb-4">
+                <MovieDisplayCard {...movie} />
               </View>
-            )}
+            ))}
+          </View>
+        )}
 
-            {!loading &&
-              !error &&
-              searchQuery.trim() &&
-              movies?.length! > 0 && (
-                <Text className="text-xl text-white font-bold">
-                  Search Results for{" "}
-                  <Text className="text-accent">{searchQuery}</Text>
-                </Text>
-              )}
-          </>
-        }
-        ListEmptyComponent={
-          !loading && !error ? (
-            <View className="mt-10 px-5">
-              {searchQuery.trim() ? (
-                <View className="items-center">
-                  <Image source={icons.search} className="w-16 h-16 mb-4" tintColor="#666" />
-                  <Text className="text-center text-gray-500 text-lg">
-                    No movies found for "{searchQuery}"
-                  </Text>
-                  <Text className="text-center text-gray-400 mt-2">
-                    Try different keywords or check your spelling
-                  </Text>
-                </View>
-              ) : (
-                <View className="items-center">
-                  <Image source={icons.search} className="w-16 h-16 mb-4" tintColor="#666" />
-                  <Text className="text-center text-gray-500 text-lg">
-                    Start typing to search for movies
-                  </Text>
-                  <Text className="text-center text-gray-400 mt-2">
-                    Find your favorite movies and TV shows
-                  </Text>
-                </View>
-              )}
-            </View>
-          ) : null
-        }
-      />
+        {!loading && !error && movies?.length === 0 && searchQuery.trim() && (
+          <View className="items-center justify-center py-8">
+            <Image source={icons.search} className="w-16 h-16 mb-4" tintColor="#666" />
+            <Text className="text-center text-gray-500 text-lg">
+              No movies found for "{searchQuery}"
+            </Text>
+            <Text className="text-center text-gray-400 mt-2">
+              Try different keywords or check your spelling
+            </Text>
+          </View>
+        )}
+
+        {!loading && !error && !searchQuery.trim() && (
+          <View className="items-center justify-center py-8">
+            <Image source={icons.search} className="w-16 h-16 mb-4" tintColor="#666" />
+            <Text className="text-center text-gray-500 text-lg">
+              Start typing to search for movies
+            </Text>
+            <Text className="text-center text-gray-400 mt-2">
+              Find your favorite movies and TV shows
+            </Text>
+          </View>
+        )}
+      </ScrollView>
     </View>
   );
 };

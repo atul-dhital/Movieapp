@@ -14,7 +14,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import { icons } from "@/constants/icons";
 import { images } from "@/constants/images";
 import { useTheme } from "@/context/ThemeContext";
@@ -54,33 +54,22 @@ const Profile = () => {
   const router = useRouter();
   const [showSavedMovies, setShowSavedMovies] = useState(false);
   const [savedMovies, setSavedMovies] = useState<Movie[]>([]);
+  const navigation = useNavigation();
 
-  useFocusEffect(
-    React.useCallback(() => {
-      const loadData = async () => {
-        setLoading(true);
-        try {
-          await loadUserData();
-        } catch (error) {
-          console.error("Error loading data:", error);
-        } finally {
-          setLoading(false);
-        }
-      };
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        await loadUserData();
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      loadData();
-    }, [])
-  );
-
-  // Reset states when tab is focused
-  useFocusEffect(
-    React.useCallback(() => {
-      setShowAbout(false);
-      setShowAccountSettings(false);
-      setShowSavedMovies(false);
-      setIsEditing(false);
-    }, [])
-  );
+    loadData();
+  }, []);
 
   const loadUserData = async () => {
     try {
@@ -437,6 +426,35 @@ const Profile = () => {
     },
   ];
 
+  // Add gesture navigation handling
+  useEffect(() => {
+    const handleBackGesture = () => {
+      if (showAccountSettings) {
+        setShowAccountSettings(false);
+        return true;
+      }
+      if (showAbout) {
+        setShowAbout(false);
+        return true;
+      }
+      if (showSavedMovies) {
+        setShowSavedMovies(false);
+        return true;
+      }
+      return false;
+    };
+
+    // Add event listener for back gesture
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (handleBackGesture()) {
+        e.preventDefault();
+      }
+    });
+
+    // Cleanup
+    return unsubscribe;
+  }, [navigation, showAccountSettings, showAbout, showSavedMovies]);
+
   if (loading) {
     return (
       <View className="flex-1 bg-primary items-center justify-center">
@@ -452,7 +470,10 @@ const Profile = () => {
           {/* Header */}
           <View className="flex-row items-center mt-4 mb-4">
             <TouchableOpacity
-              onPress={() => setShowAccountSettings(false)}
+              onPress={() => {
+                setShowAccountSettings(false);
+                router.back();
+              }}
               className="absolute left-0 z-10"
             >
               <Ionicons name="arrow-back" size={24} color="white" />
@@ -544,7 +565,7 @@ const Profile = () => {
             <TouchableOpacity
               onPress={() => {
                 setShowAbout(false);
-                router.setParams({ screen: 'profile' });
+                router.back();
               }}
               className="absolute left-0 z-10"
             >
@@ -686,95 +707,106 @@ const Profile = () => {
   }
 
   return (
-    <SafeAreaView className={`flex-1 ${isDark ? 'bg-primary' : 'bg-white'}`}>
+    <View className="flex-1 bg-primary">
       <Image
         source={images.bg}
-        className="flex-1 absolute w-full z-0"
+        className="absolute w-full z-0"
         resizeMode="cover"
-        style={{ opacity: isDark ? 1 : 0.1 }}
       />
 
-      <ScrollView className="flex-1 pb-40">
-        <View className="px-5">
-          <View className="w-full flex-row justify-center mt-5 items-center">
-            <Image source={icons.logo} className="w-12 h-10" />
-            <TouchableOpacity
-              onPress={() => console.log("Logout")}
-              className="absolute right-0"
-            >
-              <Ionicons name="log-out-outline" size={24} color={isDark ? "white" : "black"} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Profile Header */}
-          <View className="items-center mt-8 mb-8">
-            <TouchableOpacity onPress={pickImage} className="relative">
-              <Image
-                source={
-                  profileImage
-                    ? { uri: profileImage }
-                    : require("@/assets/images/default-avatar.png")
-                }
-                className="w-24 h-24 rounded-full"
-              />
-              <View className="absolute bottom-0 right-0 bg-accent p-2 rounded-full">
-                <Ionicons name="camera" size={20} color="white" />
-              </View>
-            </TouchableOpacity>
-            <Text className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-black'}`}>
-              {user.name}
-            </Text>
-            <Text className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              {user.email}
-            </Text>
-          </View>
-
-          {/* Stats */}
-          <View className="flex-row justify-around mb-8">
-            <TouchableOpacity 
-              className="items-center"
-              onPress={() => setShowSavedMovies(true)}
-            >
-              <Text className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-black'}`}>
-                {savedCount}
-              </Text>
-              <Text className={isDark ? 'text-gray-400' : 'text-gray-600'}>Saved</Text>
-            </TouchableOpacity>
-            <View className="items-center">
-              <Text className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-black'}`}>
-                {watchedCount}
-              </Text>
-              <Text className={isDark ? 'text-gray-400' : 'text-gray-600'}>Watched</Text>
-            </View>
-            <View className="items-center">
-              <Text className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-black'}`}>
-                {listsCount}
-              </Text>
-              <Text className={isDark ? 'text-gray-400' : 'text-gray-600'}>Lists</Text>
-            </View>
-          </View>
-
-          {/* Menu Items */}
-          <View className={`${isDark ? 'bg-gray-800/50' : 'bg-gray-100'} rounded-xl mb-40 border border-gray-700/50`}>
-            {menuItems.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                className="flex-row items-center py-4 px-5 border-b border-gray-700/50 last:border-b-0"
-                onPress={item.onPress}
-              >
-                <Image source={item.icon} className="w-6 h-6 mr-4" tintColor={isDark ? "#fff" : "#000"} />
-                <Text className={`text-lg flex-1 ${isDark ? 'text-white' : 'text-black'}`}>
-                  {item.title}
-                </Text>
-                {item.rightElement || (
-                  <Image source={icons.arrow} className="w-5 h-5" tintColor={isDark ? "#fff" : "#000"} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
+      <View className="flex-row justify-between items-center px-5 pt-12 pb-4">
+        <TouchableOpacity onPress={() => router.push("/")}>
+          <Image source={icons.logo} className="w-12 h-10" />
+        </TouchableOpacity>
+        <View className="flex-row gap-4">
+          <TouchableOpacity onPress={() => router.push("/search")}>
+            <Image source={icons.search} className="w-6 h-6" tintColor="#A8B5DB" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/profile")}>
+            <Image source={icons.person} className="w-6 h-6" tintColor="#A8B5DB" />
+          </TouchableOpacity>
         </View>
+      </View>
+
+      <ScrollView
+        className="flex-1 px-5"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ minHeight: "100%", paddingBottom: 10 }}
+      >
+        {loading ? (
+          <ActivityIndicator size="large" color="#0000ff" className="mt-10" />
+        ) : (
+          <View className="flex-1">
+            {/* Profile Header */}
+            <View className="items-center mt-8 mb-8">
+              <TouchableOpacity onPress={pickImage} className="relative">
+                <Image
+                  source={
+                    profileImage
+                      ? { uri: profileImage }
+                      : require("@/assets/images/default-avatar.png")
+                  }
+                  className="w-24 h-24 rounded-full"
+                />
+                <View className="absolute bottom-0 right-0 bg-accent p-2 rounded-full">
+                  <Ionicons name="camera" size={20} color="white" />
+                </View>
+              </TouchableOpacity>
+              <Text className="text-2xl font-bold text-white mt-4">
+                {user.name}
+              </Text>
+              <Text className="text-gray-400 mt-1">
+                {user.email}
+              </Text>
+            </View>
+
+            {/* Stats */}
+            <View className="flex-row justify-around mb-8">
+              <TouchableOpacity 
+                className="items-center"
+                onPress={() => setShowSavedMovies(true)}
+              >
+                <Text className="text-2xl font-bold text-white">
+                  {savedCount}
+                </Text>
+                <Text className="text-gray-400">Saved</Text>
+              </TouchableOpacity>
+              <View className="items-center">
+                <Text className="text-2xl font-bold text-white">
+                  {watchedCount}
+                </Text>
+                <Text className="text-gray-400">Watched</Text>
+              </View>
+              <View className="items-center">
+                <Text className="text-2xl font-bold text-white">
+                  {listsCount}
+                </Text>
+                <Text className="text-gray-400">Lists</Text>
+              </View>
+            </View>
+
+            {/* Menu Items */}
+            <View className="bg-gray-800/50 rounded-xl mb-40 border border-gray-700/50">
+              {menuItems.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  className="flex-row items-center py-4 px-5 border-b border-gray-700/50 last:border-b-0"
+                  onPress={item.onPress}
+                >
+                  <Image source={item.icon} className="w-6 h-6 mr-4" tintColor="#fff" />
+                  <Text className="text-lg flex-1 text-white">
+                    {item.title}
+                  </Text>
+                  {item.rightElement || (
+                    <Image source={icons.arrow} className="w-5 h-5" tintColor="#fff" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
